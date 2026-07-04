@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import CallsView from './components/CallsView'
 import SessionList from './components/SessionList'
 import SessionDetail from './components/SessionDetail'
 import { fetchSessionEvents, fetchSessions, openSessionStream } from './api'
@@ -17,6 +18,13 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [events, setEvents] = useState<TraceEvent[]>([])
   const [live, setLive] = useState(false)
+  const [view, setView] = useState<'sessions' | 'calls'>(
+    () => (localStorage.getItem('mizpah.view') === 'calls' ? 'calls' : 'sessions'),
+  )
+
+  useEffect(() => {
+    localStorage.setItem('mizpah.view', view)
+  }, [view])
 
   const loadSessions = () => {
     setLoading(true)
@@ -50,25 +58,43 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <strong>Mizpah</strong> <span className="muted">log browser</span>
+        <strong>Mizpah</strong> <span className="muted">family watchtower</span>
+        <nav className="topbar__views">
+          <button
+            className={`viewtab ${view === 'sessions' ? 'viewtab--active' : ''}`}
+            onClick={() => setView('sessions')}
+          >
+            Sessions
+          </button>
+          <button
+            className={`viewtab ${view === 'calls' ? 'viewtab--active' : ''}`}
+            onClick={() => setView('calls')}
+          >
+            LLM Calls
+          </button>
+        </nav>
         <span className="topbar__count muted">{sessions.length} sessions</span>
       </header>
-      <div className="layout">
-        <SessionList
-          sessions={sessions}
-          selectedId={selectedId}
-          onSelect={select}
-          onRefresh={loadSessions}
-          loading={loading}
-        />
-        <SessionDetail
-          sessionId={selectedId}
-          events={events}
-          live={live}
-          onToggleLive={() => setLive((value) => !value)}
-          onRefresh={() => selectedId && loadEvents(selectedId)}
-        />
-      </div>
+      {view === 'calls' ? (
+        <CallsView />
+      ) : (
+        <div className="layout">
+          <SessionList
+            sessions={sessions}
+            selectedId={selectedId}
+            onSelect={select}
+            onRefresh={loadSessions}
+            loading={loading}
+          />
+          <SessionDetail
+            sessionId={selectedId}
+            events={events}
+            live={live}
+            onToggleLive={() => setLive((value) => !value)}
+            onRefresh={() => selectedId && loadEvents(selectedId)}
+          />
+        </div>
+      )}
     </div>
   )
 }

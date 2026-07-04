@@ -1,4 +1,4 @@
-import type { SessionSummary, TraceEvent } from './types'
+import type { LlmCall, SessionSummary, TraceEvent } from './types'
 
 export async function fetchSessions(limit = 200): Promise<SessionSummary[]> {
   const res = await fetch(`/api/trace/sessions?limit=${limit}`)
@@ -26,4 +26,19 @@ export function openSessionStream(sessionId: string, onEvent: (event: TraceEvent
     }
   }
   return source
+}
+
+export async function fetchLlmCalls(params: {
+  sessionId?: string
+  source?: string
+  limit?: number
+}): Promise<LlmCall[]> {
+  const query = new URLSearchParams()
+  if (params.sessionId) query.set('session_id', params.sessionId)
+  if (params.source) query.set('source', params.source)
+  query.set('limit', String(params.limit ?? 200))
+  const res = await fetch(`/api/llm-calls?${query}`)
+  if (!res.ok) throw new Error(`/api/llm-calls failed: ${res.status}`)
+  const body = await res.json()
+  return (body.calls ?? []) as LlmCall[]
 }

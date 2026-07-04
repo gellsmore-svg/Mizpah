@@ -26,3 +26,23 @@ export interface SessionSummary {
   first_query: string | null
   last_answer_preview: string | null
 }
+
+// One captured LLM call (galeed llm_calls): the full In→Out debugging record.
+export interface LlmCall {
+  call_id: string
+  trace_id: string
+  session_id: string
+  source: string
+  step_name: string | null
+  parent_call_id: string | null
+  model: string | null
+  prompt: string | null
+  messages: { role: string; content: string }[] | null
+  output: string | null
+  error: string | null
+  status: 'completed' | 'failed'
+  started_at: string | null
+  completed_at: string | null
+  duration_ms: number | null
+  metadata: Record<string, unknown>
+}
