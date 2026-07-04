@@ -43,9 +43,10 @@ Override the trace API with `VITE_TRACE_API`.
 
 **This repo starts as the viewer** — the missing "browse any session" interface.
 
-The trace **library** (emit/record/stream) currently lives single-source in Tirzah
-(`tirzah/trace/`, extraction-ready: zero Tirzah imports, `source`-parameterized). It
-will **move here** when a second project needs to emit, so all family tools import
-one library — deliberately not duplicated now. A central **collector** service
-(receive events from any project) is a later addition; today Mizpah reads Tirzah's
-trace API directly.
+The trace **library** now lives in
+[Galeed](https://github.com/gellsmore-svg/galeed): Galeed records structured
+process events, while Mizpah views them. Tirzah is still the current HTTP host for
+the trace API that Mizpah consumes (`/api/trace/...`), so Mizpah remains decoupled
+from Tirzah internals and talks only to the public API. A central Galeed collector
+service that receives events from every project is a later addition; today the
+Tirzah backend serves the trace stream and historical queries.
