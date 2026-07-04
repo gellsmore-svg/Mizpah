@@ -27,7 +27,7 @@ family UIs.
 
 ```bash
 # Tirzah backend (serves the trace API) on :8765
-cd ../Tirzah && tirzah serve
+cd ../tirzah && tirzah serve
 # Mizpah
 npm install && npm run dev   # http://localhost:5274  (proxies /api -> :8765)
 ```
