@@ -19,6 +19,18 @@ inline; Mizpah is where you go to find and read *any* session after the fact.
 - **Session detail** (right): the full event timeline for the selected session
   (timestamp, status, type, source, summary, metadata, ids), with a **live tail**
   toggle and copy-all-as-JSON.
+- **LLM Calls** (tab): the family **debugging view** — every captured model call
+  as clean In→Out cards grouped by trace, chains nested via `parent_call_id`,
+  full-text search, source filter, clamp/expand for long payloads, and a
+  persisted **Advanced** toggle for the technical layer (model, duration,
+  metadata). Reads galeed's `llm_calls` store.
+
+## Backend
+
+Mizpah's dev proxy points at **`galeed serve`** (the family trace API, default
+`http://localhost:8785`) — run `galeed serve` (`pip install galeed[web]`) against
+the shared Mongo. Override with `VITE_TRACE_API` (e.g. a running Tirzah on
+`:8765` speaks the same `/api/trace/*` shapes, minus `/api/llm-calls`).
 
 E-ink-friendly by default (high-contrast monochrome, no animation), matching the
 family UIs.
