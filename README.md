@@ -62,3 +62,13 @@ the trace API that Mizpah consumes (`/api/trace/...`), so Mizpah remains decoupl
 from Tirzah internals and talks only to the public API. A central Galeed collector
 service that receives events from every project is a later addition; today the
 Tirzah backend serves the trace stream and historical queries.
+
+## Security note
+
+The **LLM Calls** view renders full-fidelity captures: complete prompts and
+outputs, including any retrieved memory or user content the emitting tool put
+into a prompt. Treat the Mizpah screen — and the trace database behind it —
+with the same sensitivity as the source data. The backing APIs (`galeed
+serve` / Tirzah) are unauthenticated and bind localhost; do not proxy them
+beyond your machine without authentication. See Galeed's SECURITY.md for the
+storage posture and purge guidance.

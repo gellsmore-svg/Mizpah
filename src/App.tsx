@@ -26,11 +26,16 @@ export default function App() {
     localStorage.setItem('mizpah.view', view)
   }, [view])
 
+  const [sessionsError, setSessionsError] = useState<string | null>(null)
+
   const loadSessions = () => {
     setLoading(true)
     fetchSessions()
-      .then(setSessions)
-      .catch(() => setSessions([]))
+      .then((rows) => {
+        setSessions(rows)
+        setSessionsError(null)
+      })
+      .catch((error: Error) => setSessionsError(error.message || 'trace API unreachable'))
       .finally(() => setLoading(false))
   }
   useEffect(loadSessions, [])
@@ -73,7 +78,9 @@ export default function App() {
             LLM Calls
           </button>
         </nav>
-        <span className="topbar__count muted">{sessions.length} sessions</span>
+        <span className="topbar__count muted">
+          {sessionsError ? `⚠ ${sessionsError}` : `${sessions.length} sessions`}
+        </span>
       </header>
       {view === 'calls' ? (
         <CallsView />

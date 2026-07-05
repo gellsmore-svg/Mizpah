@@ -14,7 +14,7 @@ interface CallNode extends LlmCall {
   children: CallNode[]
 }
 
-function buildForest(calls: LlmCall[]): CallNode[] {
+export function buildForest(calls: LlmCall[]): CallNode[] {
   const byId = new Map<string, CallNode>()
   calls.forEach((call) => byId.set(call.call_id, { ...call, children: [] }))
   const roots: CallNode[] = []
@@ -26,7 +26,7 @@ function buildForest(calls: LlmCall[]): CallNode[] {
   return roots
 }
 
-function matches(call: LlmCall, needle: string): boolean {
+export function matches(call: LlmCall, needle: string): boolean {
   const haystack = [
     call.step_name,
     call.session_id,
@@ -102,6 +102,7 @@ function CallCard({ node, advanced, depth }: { node: CallNode; advanced: boolean
 export default function CallsView() {
   const [calls, setCalls] = useState<LlmCall[]>([])
   const [loading, setLoading] = useState(true)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [source, setSource] = useState('')
   const [advanced, setAdvanced] = useState(() => localStorage.getItem('mizpah.advanced') === 'true')
@@ -112,8 +113,14 @@ export default function CallsView() {
 
   const load = () => {
     fetchLlmCalls({ source: source || undefined })
-      .then(setCalls)
-      .catch(() => setCalls([]))
+      .then((rows) => {
+        setCalls(rows)
+        setConnectionError(null)
+      })
+      .catch((error: Error) => {
+        // Distinguish "backend unreachable" from "no captures yet".
+        setConnectionError(error.message || 'trace API unreachable')
+      })
       .finally(() => setLoading(false))
   }
   useEffect(() => {
@@ -169,7 +176,13 @@ export default function CallsView() {
       </div>
       <div className="calls__list">
         {loading && <p className="muted">loading…</p>}
-        {!loading && traces.length === 0 && (
+        {!loading && connectionError && (
+          <p className="calls__error">
+            Trace API unreachable ({connectionError}) — is `galeed serve` (or a
+            Tirzah with /api/llm-calls) running behind the proxy? Retrying every 5s.
+          </p>
+        )}
+        {!loading && !connectionError && traces.length === 0 && (
           <p className="muted">
             No captured LLM calls. Emission is opt-in: Hoglah needs galeed_enabled +
             galeed_capture_io; other tools use galeed.capture_llm_call.

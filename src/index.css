@@ -417,3 +417,8 @@ body {
   font-size: 11px;
   overflow-x: auto;
 }
+
+.calls__error {
+  color: var(--danger);
+  font-size: 13px;
+}
