@@ -4,7 +4,7 @@
 
 Mizpah is the cross-project viewer for the structured trace/event log emitted by
 [Tirzah](https://github.com/gellsmore-svg/tirzah) (and, in time, Mahalath, Hoglah,
-Cairn, Milcah). It lets you **browse sessions** — not just the one you're currently
+Deborah, Huldah, Milcah). It lets you **browse sessions** — not just the one you're currently
 in — and inspect a session's full request lifecycle.
 
 It pairs with the per-conversation dev-log popup in
