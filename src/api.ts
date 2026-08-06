@@ -14,9 +14,19 @@ export async function fetchSessionEvents(sessionId: string, limit = 1000): Promi
   return (body.events ?? []) as TraceEvent[]
 }
 
-/** Live tail for a session (data-only SSE frames). Returns the EventSource. */
-export function openSessionStream(sessionId: string, onEvent: (event: TraceEvent) => void): EventSource {
-  const source = new EventSource(`/api/trace/stream?session_id=${encodeURIComponent(sessionId)}&replay=true`)
+/**
+ * Live tail for a session (data-only SSE frames). Returns the EventSource.
+ * EventSource auto-reconnects on transient drops; pass `onError` so the UI can
+ * show a reconnecting / connection-lost hint instead of going stale silently.
+ */
+export function openSessionStream(
+  sessionId: string,
+  onEvent: (event: TraceEvent) => void,
+  onError?: (error: Event) => void,
+): EventSource {
+  const source = new EventSource(
+    `/api/trace/stream?session_id=${encodeURIComponent(sessionId)}&replay=true`,
+  )
   source.onmessage = (event) => {
     if (!event.data) return
     try {
@@ -24,6 +34,10 @@ export function openSessionStream(sessionId: string, onEvent: (event: TraceEvent
     } catch {
       /* keepalive */
     }
+  }
+  source.onerror = (error) => {
+    console.warn('session stream error (readyState=%d)', source.readyState)
+    onError?.(error)
   }
   return source
 }

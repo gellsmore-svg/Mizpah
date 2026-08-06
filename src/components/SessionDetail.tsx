@@ -3,12 +3,24 @@ import type { TraceEvent } from '../types'
 interface Props {
   sessionId: string | null
   events: TraceEvent[]
+  eventsError?: string | null
+  eventsLoading?: boolean
   live: boolean
+  streamHint?: string | null
   onToggleLive: () => void
   onRefresh: () => void
 }
 
-export default function SessionDetail({ sessionId, events, live, onToggleLive, onRefresh }: Props) {
+export default function SessionDetail({
+  sessionId,
+  events,
+  eventsError = null,
+  eventsLoading = false,
+  live,
+  streamHint = null,
+  onToggleLive,
+  onRefresh,
+}: Props) {
   if (!sessionId) {
     return (
       <main className="detail detail--empty">
@@ -40,7 +52,22 @@ export default function SessionDetail({ sessionId, events, live, onToggleLive, o
         </div>
       </header>
       <div className="detail__body">
-        {events.length === 0 && <p className="muted">No events for this session.</p>}
+        {eventsError && (
+          <p className="detail__error" role="alert">
+            ⚠ Could not load events: {eventsError}
+          </p>
+        )}
+        {streamHint && live && (
+          <p className="detail__stream-hint" role="status">
+            {streamHint}
+          </p>
+        )}
+        {!eventsError && eventsLoading && events.length === 0 && (
+          <p className="muted">Loading events…</p>
+        )}
+        {!eventsError && !eventsLoading && events.length === 0 && (
+          <p className="muted">No events for this session.</p>
+        )}
         {events.map((event) => (
           <div key={event.event_id} className={`logrow logrow--${event.severity}`}>
             <div className="logrow__top">

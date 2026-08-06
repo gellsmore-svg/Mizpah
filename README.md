@@ -38,30 +38,37 @@ family UIs.
 ## Running it
 
 ```bash
-# Tirzah backend (serves the trace API) on :8765
-cd ../tirzah && tirzah serve
-# Mizpah
-npm install && npm run dev   # http://localhost:5274  (proxies /api -> :8765)
+# Preferred: Galeed family trace API on :8785
+cd ../Galeed && galeed serve
+# Mizpah (http://localhost:5274, proxies /api → :8785)
+npm install && npm run dev
 ```
-Override the trace API with `VITE_TRACE_API`.
+
+Fallback — point at a running Tirzah instead (same `/api/trace/*` shapes; no
+`/api/llm-calls`, so the **LLM Calls** tab needs Galeed):
+
+```bash
+# VITE_TRACE_API=http://localhost:8765 npm run dev
+```
 
 ## Trace API it consumes
 
 - `GET /api/trace/sessions` → session summaries
 - `GET /api/trace/events?session_id=…|trace_id=…` → a session/trace's events
 - `GET /api/trace/stream?session_id=…&replay=true` → live tail (SSE)
+- `GET /api/llm-calls` → model call captures (**Galeed only**)
 
 ## Scope / status
 
-**This repo starts as the viewer** — the missing "browse any session" interface.
+**This repo is the viewer** — the "browse any session" interface over the family
+trace stream.
 
-The trace **library** now lives in
+The trace **library and HTTP host** live in
 [Galeed](https://github.com/gellsmore-svg/galeed): Galeed records structured
-process events, while Mizpah views them. Tirzah is still the current HTTP host for
-the trace API that Mizpah consumes (`/api/trace/...`), so Mizpah remains decoupled
-from Tirzah internals and talks only to the public API. A central Galeed collector
-service that receives events from every project is a later addition; today the
-Tirzah backend serves the trace stream and historical queries.
+process events and serves `/api/trace/*` plus `/api/llm-calls`. Mizpah remains
+decoupled from any one product's internals and talks only to that public API.
+Tirzah still speaks the same `/api/trace/*` shapes, so `VITE_TRACE_API` can
+target it when Galeed is not running (session browser only).
 
 ## Security note
 

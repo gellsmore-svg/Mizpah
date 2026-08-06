@@ -153,6 +153,20 @@ body {
   display: inline-flex;
   gap: 6px;
 }
+.detail__error {
+  color: var(--danger);
+  font-size: 13px;
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+.detail__stream-hint {
+  color: var(--started);
+  font-size: 12px;
+  margin: 0 0 10px;
+}
 .detail__body {
   flex: 1;
   overflow-y: auto;

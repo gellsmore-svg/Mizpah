@@ -3,21 +3,18 @@ import CallsView from './components/CallsView'
 import SessionList from './components/SessionList'
 import SessionDetail from './components/SessionDetail'
 import { fetchSessionEvents, fetchSessions, openSessionStream } from './api'
+import { sortEvents } from './traceLogic'
 import type { SessionSummary, TraceEvent } from './types'
-
-function sortEvents(events: TraceEvent[]): TraceEvent[] {
-  return [...events].sort((a, b) => {
-    if (a.timestamp === b.timestamp) return a.seq - b.seq
-    return a.timestamp < b.timestamp ? -1 : 1
-  })
-}
 
 export default function App() {
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [events, setEvents] = useState<TraceEvent[]>([])
+  const [eventsError, setEventsError] = useState<string | null>(null)
+  const [eventsLoading, setEventsLoading] = useState(false)
   const [live, setLive] = useState(false)
+  const [streamHint, setStreamHint] = useState<string | null>(null)
   const [view, setView] = useState<'sessions' | 'calls'>(
     () => (localStorage.getItem('mizpah.view') === 'calls' ? 'calls' : 'sessions'),
   )
@@ -41,22 +38,49 @@ export default function App() {
   useEffect(loadSessions, [])
 
   const loadEvents = (id: string) => {
+    setEventsLoading(true)
+    setEventsError(null)
     fetchSessionEvents(id)
-      .then((list) => setEvents(sortEvents(list)))
-      .catch(() => setEvents([]))
+      .then((list) => {
+        setEvents(sortEvents(list))
+        setEventsError(null)
+      })
+      .catch((error: Error) => {
+        setEvents([])
+        setEventsError(error.message || 'failed to load session events')
+      })
+      .finally(() => setEventsLoading(false))
   }
 
   const select = (id: string) => {
     setSelectedId(id)
     setLive(false)
+    setStreamHint(null)
     loadEvents(id)
   }
 
   useEffect(() => {
-    if (!live || !selectedId) return
-    const stream = openSessionStream(selectedId, (event) => {
-      setEvents((prev) => (prev.some((existing) => existing.event_id === event.event_id) ? prev : sortEvents([...prev, event])))
-    })
+    if (!live || !selectedId) {
+      setStreamHint(null)
+      return
+    }
+    setStreamHint(null)
+    const stream = openSessionStream(
+      selectedId,
+      (event) => {
+        setStreamHint(null)
+        setEvents((prev) =>
+          prev.some((existing) => existing.event_id === event.event_id)
+            ? prev
+            : sortEvents([...prev, event]),
+        )
+      },
+      () => {
+        // EventSource reconnects automatically; surface the drop so live tail
+        // is never a silent no-op (Mizpah #10).
+        setStreamHint('Live tail interrupted — reconnecting…')
+      },
+    )
     return () => stream.close()
   }, [live, selectedId])
 
@@ -96,7 +120,10 @@ export default function App() {
           <SessionDetail
             sessionId={selectedId}
             events={events}
+            eventsError={eventsError}
+            eventsLoading={eventsLoading}
             live={live}
+            streamHint={streamHint}
             onToggleLive={() => setLive((value) => !value)}
             onRefresh={() => selectedId && loadEvents(selectedId)}
           />
