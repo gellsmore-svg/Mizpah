@@ -1,3 +1,9 @@
+import { useMemo, useState } from 'react'
+import {
+  countByPreset,
+  filterEventsByPreset,
+  type EventFilterPreset,
+} from '../traceLogic'
 import type { TraceEvent } from '../types'
 
 interface Props {
@@ -11,6 +17,15 @@ interface Props {
   onRefresh: () => void
 }
 
+const PRESET_LABELS: Record<EventFilterPreset, string> = {
+  all: 'All',
+  orchestration: 'Orchestration',
+  decisions: 'Decisions',
+  negotiation: 'Negotiation',
+  open_questions: 'Open Q',
+  process: 'Process',
+}
+
 export default function SessionDetail({
   sessionId,
   events,
@@ -21,6 +36,13 @@ export default function SessionDetail({
   onToggleLive,
   onRefresh,
 }: Props) {
+  const [preset, setPreset] = useState<EventFilterPreset>('all')
+  const counts = useMemo(() => countByPreset(events), [events])
+  const visible = useMemo(
+    () => filterEventsByPreset(events, preset),
+    [events, preset],
+  )
+
   if (!sessionId) {
     return (
       <main className="detail detail--empty">
@@ -30,7 +52,7 @@ export default function SessionDetail({
   }
 
   const copyAll = () => {
-    void navigator.clipboard?.writeText(JSON.stringify(events, null, 2))
+    void navigator.clipboard?.writeText(JSON.stringify(visible, null, 2))
   }
 
   return (
@@ -46,11 +68,25 @@ export default function SessionDetail({
           <button className="icon-btn" title="Refresh" onClick={onRefresh}>
             ⟳
           </button>
-          <button className="icon-btn" title="Copy all events as JSON" onClick={copyAll}>
+          <button className="icon-btn" title="Copy filtered events as JSON" onClick={copyAll}>
             ⧉
           </button>
         </div>
       </header>
+      <div className="detail__filters" role="toolbar" aria-label="Event type filters">
+        {(Object.keys(PRESET_LABELS) as EventFilterPreset[]).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={`filterchip ${preset === key ? 'filterchip--active' : ''}`}
+            onClick={() => setPreset(key)}
+            title={key}
+          >
+            {PRESET_LABELS[key]}
+            <span className="filterchip__count muted">{counts[key]}</span>
+          </button>
+        ))}
+      </div>
       <div className="detail__body">
         {eventsError && (
           <p className="detail__error" role="alert">
@@ -68,7 +104,10 @@ export default function SessionDetail({
         {!eventsError && !eventsLoading && events.length === 0 && (
           <p className="muted">No events for this session.</p>
         )}
-        {events.map((event) => (
+        {!eventsError && events.length > 0 && visible.length === 0 && (
+          <p className="muted">No events match this filter.</p>
+        )}
+        {visible.map((event) => (
           <div key={event.event_id} className={`logrow logrow--${event.severity}`}>
             <div className="logrow__top">
               <span className="logrow__ts">{event.timestamp?.slice(11, 23)}</span>

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { sortEvents } from './traceLogic'
+import {
+  countByPreset,
+  filterEventsByPreset,
+  sortEvents,
+} from './traceLogic'
 import type { TraceEvent } from './types'
 
 const event = (over: Partial<TraceEvent>): TraceEvent => ({
@@ -37,5 +41,32 @@ describe('sortEvents', () => {
     const before = input.map((e) => e.event_id)
     sortEvents(input)
     expect(input.map((e) => e.event_id)).toEqual(before)
+  })
+})
+
+describe('orchestration event filters', () => {
+  const sample = [
+    event({ event_id: '1', type: 'decision.recorded' }),
+    event({ event_id: '2', type: 'negotiation.finished' }),
+    event({ event_id: '3', type: 'open_question.recorded' }),
+    event({ event_id: '4', type: 'plan.finished' }),
+    event({ event_id: '5', type: 'llm.call.completed' }),
+  ]
+
+  it('filters decisions', () => {
+    expect(filterEventsByPreset(sample, 'decisions').map((e) => e.event_id)).toEqual(['1'])
+  })
+
+  it('filters orchestration bucket', () => {
+    const ids = filterEventsByPreset(sample, 'orchestration').map((e) => e.event_id)
+    expect(ids).toEqual(['1', '2', '3', '4'])
+  })
+
+  it('counts presets', () => {
+    const c = countByPreset(sample)
+    expect(c.all).toBe(5)
+    expect(c.decisions).toBe(1)
+    expect(c.open_questions).toBe(1)
+    expect(c.negotiation).toBe(1)
   })
 })

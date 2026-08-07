@@ -153,6 +153,38 @@ body {
   display: inline-flex;
   gap: 6px;
 }
+.detail__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-2);
+}
+.filterchip {
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.filterchip:hover {
+  border-color: var(--accent);
+}
+.filterchip--active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-3));
+  color: var(--accent);
+}
+.filterchip__count {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+}
 .detail__error {
   color: var(--danger);
   font-size: 13px;
