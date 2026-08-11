@@ -3,7 +3,7 @@ import CallsView from './components/CallsView'
 import SessionList from './components/SessionList'
 import SessionDetail from './components/SessionDetail'
 import { fetchSessionEvents, fetchSessions, openSessionStream } from './api'
-import { sortEvents } from './traceLogic'
+import { insertEvent, sortEvents } from './traceLogic'
 import type { SessionSummary, TraceEvent } from './types'
 
 export default function App() {
@@ -69,11 +69,10 @@ export default function App() {
       selectedId,
       (event) => {
         setStreamHint(null)
-        setEvents((prev) =>
-          prev.some((existing) => existing.event_id === event.event_id)
-            ? prev
-            : sortEvents([...prev, event]),
-        )
+        // Insert in place rather than re-sorting the whole timeline on every
+        // frame: arrivals are almost always simply the newest event, and
+        // sessions here hold 1 500+.
+        setEvents((prev) => insertEvent(prev, event))
       },
       () => {
         // EventSource reconnects automatically; surface the drop so live tail

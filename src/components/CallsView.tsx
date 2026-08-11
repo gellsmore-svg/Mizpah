@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchLlmCalls } from '../api'
+import { buildForest, matches, type CallNode } from '../callsLogic'
+import { formatClockTime } from '../traceLogic'
 import type { LlmCall } from '../types'
 
 /**
@@ -9,36 +11,6 @@ import type { LlmCall } from '../types'
  * appears only with the Advanced toggle, and long payloads clamp until
  * expanded.
  */
-
-interface CallNode extends LlmCall {
-  children: CallNode[]
-}
-
-export function buildForest(calls: LlmCall[]): CallNode[] {
-  const byId = new Map<string, CallNode>()
-  calls.forEach((call) => byId.set(call.call_id, { ...call, children: [] }))
-  const roots: CallNode[] = []
-  byId.forEach((node) => {
-    const parent = node.parent_call_id ? byId.get(node.parent_call_id) : undefined
-    if (parent && parent !== node) parent.children.push(node)
-    else roots.push(node)
-  })
-  return roots
-}
-
-export function matches(call: LlmCall, needle: string): boolean {
-  const haystack = [
-    call.step_name,
-    call.session_id,
-    call.trace_id,
-    call.model,
-    call.prompt,
-    call.output,
-    call.error,
-    ...(call.messages ?? []).map((message) => message.content),
-  ]
-  return haystack.some((value) => value && value.toLowerCase().includes(needle))
-}
 
 function Payload({ label, text, tone }: { label: string; text: string; tone?: 'error' }) {
   const [expanded, setExpanded] = useState(false)
@@ -70,7 +42,21 @@ function CallCard({ node, advanced, depth }: { node: CallNode; advanced: boolean
             {node.duration_ms != null ? ` · ${node.duration_ms}ms` : ''} · {node.call_id.slice(0, 12)}
           </span>
         )}
-        <span className="muted mono call__time">{(node.completed_at ?? '').slice(11, 19)}</span>
+        {node.anomaly && (
+          // Say so rather than quietly re-parenting: a chain that cannot be
+          // resolved is itself a finding when you are debugging a run.
+          <span
+            className="call__anomaly"
+            title={
+              node.anomaly === 'cycle'
+                ? 'parent_call_id chain loops back to this call — shown at top level'
+                : 'another call shares this call_id — both are shown'
+            }
+          >
+            {node.anomaly === 'cycle' ? '⚠ cyclic parent' : '⚠ duplicate id'}
+          </span>
+        )}
+        <span className="muted mono call__time">{formatClockTime(node.completed_at)}</span>
       </div>
       {node.messages?.length ? (
         <div className="call__payload">
@@ -92,8 +78,15 @@ function CallCard({ node, advanced, depth }: { node: CallNode; advanced: boolean
       {advanced && Object.keys(node.metadata ?? {}).length > 0 && (
         <pre className="call__meta mono">{JSON.stringify(node.metadata, null, 2)}</pre>
       )}
-      {node.children.map((child) => (
-        <CallCard key={child.call_id} node={child} advanced={advanced} depth={depth + 1} />
+      {node.children.map((child, index) => (
+        // Keyed by position as well as id: duplicate call_ids are now kept
+        // rather than discarded, so the id alone is no longer unique.
+        <CallCard
+          key={`${child.call_id}:${index}`}
+          node={child}
+          advanced={advanced}
+          depth={depth + 1}
+        />
       ))}
     </div>
   )
@@ -193,8 +186,13 @@ export default function CallsView() {
             <div className="trace__head mono muted">
               {traceId} · {group[0].session_id} · {group.length} call(s)
             </div>
-            {buildForest(group).map((node) => (
-              <CallCard key={node.call_id} node={node} advanced={advanced} depth={0} />
+            {buildForest(group).map((node, index) => (
+              <CallCard
+                key={`${node.call_id}:${index}`}
+                node={node}
+                advanced={advanced}
+                depth={0}
+              />
             ))}
           </section>
         ))}

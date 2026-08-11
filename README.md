@@ -18,7 +18,10 @@ inline; Mizpah is where you go to find and read *any* session after the fact.
   or source.
 - **Session detail** (right): the full event timeline for the selected session
   (timestamp, status, type, source, summary, metadata, ids), with a **live tail**
-  toggle and copy-all-as-JSON.
+  toggle and copy-all-as-JSON. Filter chips include **Orchestration**,
+  **Decisions**, **Negotiation**, **Open Q**, **Phases** (Deborah mid-slice
+  `slice.phase.*` / post-retrieve gate), and **Process**. Negotiation rows show
+  meta chips (`pre-plan` vs `post-retrieve`, status, evidence count, novel).
 - **LLM Calls** (tab): the family **debugging view** — every captured model call
   as clean In→Out cards grouped by trace, chains nested via `parent_call_id`,
   full-text search, source filter, clamp/expand for long payloads, and a
@@ -69,6 +72,15 @@ process events and serves `/api/trace/*` plus `/api/llm-calls`. Mizpah remains
 decoupled from any one product's internals and talks only to that public API.
 Tirzah still speaks the same `/api/trace/*` shapes, so `VITE_TRACE_API` can
 target it when Galeed is not running (session browser only).
+
+## Review
+
+A point-in-time functional + code review of 0.1.1 is in
+[`docs/review-2026-08-11.md`](docs/review-2026-08-11.md). All findings are
+actioned except one half of M3, which was walked back on inspection — the
+reasoning is recorded inline. Chief among them: a cyclic `parent_call_id` used
+to make calls vanish from the LLM Calls view; unresolvable chains and duplicate
+ids are now shown and flagged rather than dropped.
 
 ## Security note
 

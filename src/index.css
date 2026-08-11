@@ -181,6 +181,17 @@ body {
   background: color-mix(in srgb, var(--accent) 18%, var(--bg-3));
   color: var(--accent);
 }
+.metachip {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent, #6b8cae) 18%, transparent);
+  color: var(--text, inherit);
+  border: 1px solid color-mix(in srgb, var(--accent, #6b8cae) 35%, transparent);
+  white-space: nowrap;
+}
+
 .filterchip__count {
   font-variant-numeric: tabular-nums;
   font-size: 11px;
@@ -198,6 +209,24 @@ body {
   color: var(--started);
   font-size: 12px;
   margin: 0 0 10px;
+}
+/* Result of the copy button — success or the reason it could not. */
+.detail__copy-hint {
+  font-size: 11px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+/* A call whose parent chain could not be resolved, or whose id is shared.
+   Marked rather than dropped: in the watchtower, a missing record is
+   indistinguishable from an event that never happened. */
+.call__anomaly {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  white-space: nowrap;
 }
 .detail__body {
   flex: 1;

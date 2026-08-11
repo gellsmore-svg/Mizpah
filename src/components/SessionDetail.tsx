@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import {
   countByPreset,
+  eventMetaChips,
   filterEventsByPreset,
+  formatClockTime,
   type EventFilterPreset,
 } from '../traceLogic'
 import type { TraceEvent } from '../types'
@@ -23,6 +25,7 @@ const PRESET_LABELS: Record<EventFilterPreset, string> = {
   decisions: 'Decisions',
   negotiation: 'Negotiation',
   open_questions: 'Open Q',
+  phases: 'Phases',
   process: 'Process',
 }
 
@@ -37,6 +40,7 @@ export default function SessionDetail({
   onRefresh,
 }: Props) {
   const [preset, setPreset] = useState<EventFilterPreset>('all')
+  const [copyHint, setCopyHint] = useState<string | null>(null)
   const counts = useMemo(() => countByPreset(events), [events])
   const visible = useMemo(
     () => filterEventsByPreset(events, preset),
@@ -51,8 +55,17 @@ export default function SessionDetail({
     )
   }
 
-  const copyAll = () => {
-    void navigator.clipboard?.writeText(JSON.stringify(visible, null, 2))
+  // A copy that quietly does nothing (no clipboard API outside a secure
+  // context) is indistinguishable from one that worked, so say which it was.
+  const copyAll = async () => {
+    const payload = JSON.stringify(visible, null, 2)
+    try {
+      if (!navigator.clipboard) throw new Error('clipboard unavailable (needs https or localhost)')
+      await navigator.clipboard.writeText(payload)
+      setCopyHint(`copied ${visible.length} event(s)`)
+    } catch (error) {
+      setCopyHint(`copy failed: ${(error as Error).message}`)
+    }
   }
 
   return (
@@ -68,9 +81,14 @@ export default function SessionDetail({
           <button className="icon-btn" title="Refresh" onClick={onRefresh}>
             ⟳
           </button>
-          <button className="icon-btn" title="Copy filtered events as JSON" onClick={copyAll}>
+          <button className="icon-btn" title="Copy filtered events as JSON" onClick={() => void copyAll()}>
             ⧉
           </button>
+          {copyHint && (
+            <span className="detail__copy-hint muted" role="status">
+              {copyHint}
+            </span>
+          )}
         </div>
       </header>
       <div className="detail__filters" role="toolbar" aria-label="Event type filters">
@@ -107,13 +125,20 @@ export default function SessionDetail({
         {!eventsError && events.length > 0 && visible.length === 0 && (
           <p className="muted">No events match this filter.</p>
         )}
-        {visible.map((event) => (
+        {visible.map((event) => {
+          const chips = eventMetaChips(event)
+          return (
           <div key={event.event_id} className={`logrow logrow--${event.severity}`}>
             <div className="logrow__top">
-              <span className="logrow__ts">{event.timestamp?.slice(11, 23)}</span>
+              <span className="logrow__ts">{formatClockTime(event.timestamp)}</span>
               <span className={`badge badge--${event.status}`}>{event.status}</span>
               <span className="logrow__type">{event.type}</span>
               <span className="logrow__src muted">{event.source}</span>
+              {chips.map((chip, index) => (
+                <span key={`${chip}:${index}`} className="metachip">
+                  {chip}
+                </span>
+              ))}
             </div>
             <div className="logrow__summary">{event.summary}</div>
             {event.metadata && Object.keys(event.metadata).length > 0 && (
@@ -123,7 +148,8 @@ export default function SessionDetail({
               {event.trace_id} · seq {event.seq}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </main>
   )
