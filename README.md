@@ -1,93 +1,88 @@
 # Mizpah
 
-**A standalone log browser for the family trace stream** — *"the Lord watch between us"* (Gen 31:49). A watchtower over what the family's tools actually did.
+**Mizpah is a browser for reading what the family's tools actually did, in
+any session, after the fact.** It shows every session in the trace store,
+each session's full event timeline, and every captured model call as an
+In→Out card.
 
-Mizpah is the cross-project viewer for the structured trace/event log emitted by
-[Tirzah](https://github.com/gellsmore-svg/tirzah) (and, in time, Mahalath, Hoglah,
-Deborah, Huldah, Milcah). It lets you **browse sessions** — not just the one you're currently
-in — and inspect a session's full request lifecycle.
+It is the viewer half of a pair. [Galeed](https://github.com/gellsmore-svg/galeed)
+records the trace events and model calls; Mizpah views them. (Genesis 31:49:
+*"The Lord watch between us"*, a watchtower over the record.)
 
-It pairs with the per-conversation dev-log popup in
-[Mahlah](https://github.com/gellsmore-svg/Mahlah): that shows the *current* session
-inline; Mizpah is where you go to find and read *any* session after the fact.
+## Is it for you?
 
-## What it does
+**Good fit:** you run family tools (Tirzah, Mahalath, Hoglah, Huldah, Milcah
+and others) that emit to Galeed, and you want to find an old session, follow
+a request step by step, or read exactly what a model was sent and returned.
 
-- **Session list** (left): every session in the trace store, with its sources,
-  request/event counts, first query, and last activity — filterable by id, query,
+**Not a fit:** watching only the conversation you are in right now. The
+dev-log popup in [Mahlah](https://github.com/gellsmore-svg/Mahlah) does that
+inline.
+
+## Try it
+
+You need Node and a running Galeed trace API over your trace database:
+
+```bash
+pip install "galeed[web]" && galeed serve      # trace API on :8785
+npm install && npm run dev                      # Mizpah on http://localhost:5274
+```
+
+Mizpah proxies `/api` to `http://localhost:8785`. To use another source, set
+`VITE_TRACE_API`. For example, a running Tirzah on `:8765` serves the same
+session and event API but not model calls, so the **LLM Calls** tab stays
+empty:
+
+```bash
+VITE_TRACE_API=http://localhost:8765 npm run dev
+```
+
+## What you see
+
+- **Sessions** (left): every session in the store, with its sources,
+  request and event counts, first query and last activity. Filter by id, query
   or source.
-- **Session detail** (right): the full event timeline for the selected session
-  (timestamp, status, type, source, summary, metadata, ids), with a **live tail**
-  toggle and copy-all-as-JSON. Filter chips include **Orchestration**,
-  **Decisions**, **Negotiation**, **Open Q**, **Phases** (Deborah mid-slice
-  `slice.phase.*` / post-retrieve gate), and **Process**. Negotiation rows show
-  meta chips (`pre-plan` vs `post-retrieve`, status, evidence count, novel).
-- **LLM Calls** (tab): the family **debugging view** — every captured model call
-  as clean In→Out cards grouped by trace, chains nested via `parent_call_id`,
-  full-text search, source filter, clamp/expand for long payloads, and a
-  persisted **Advanced** toggle for the technical layer (model, duration,
-  metadata). Reads galeed's `llm_calls` store.
+- **Session detail** (right): the full event timeline (time, status, type,
+  source, summary, metadata, ids) with a **live tail** toggle and copy-all as
+  JSON. Filter chips narrow it to **Orchestration**, **Decisions**,
+  **Negotiation**, **Open Q**, **Phases** and **Process**.
+- **LLM Calls** (tab): every captured model call as an In→Out card, grouped by
+  trace, with recursive chains nested via `parent_call_id`. Full-text search,
+  source filter, expandable long payloads, and an **Advanced** toggle for
+  model, duration and metadata. Broken or cyclic chains are shown and flagged,
+  never dropped.
 
-## Backend
+The UI is e-ink friendly by default (high-contrast monochrome, no animation),
+like the other family UIs.
 
-Mizpah's dev proxy points at **`galeed serve`** (the family trace API, default
-`http://localhost:8785`) — run `galeed serve` (`pip install galeed[web]`) against
-the shared Mongo. Override with `VITE_TRACE_API` (e.g. a running Tirzah on
-`:8765` speaks the same `/api/trace/*` shapes, minus `/api/llm-calls`).
+## Handle with care
 
-E-ink-friendly by default (high-contrast monochrome, no animation), matching the
-family UIs.
+The **LLM Calls** view shows complete prompts and outputs, including any
+retrieved memory or user content a tool put into a prompt. Treat the screen
+and the trace database with the same sensitivity as that source data.
+`galeed serve` and Tirzah are unauthenticated and bind to localhost: do not
+expose them beyond your machine without authentication. Galeed's
+[SECURITY.md](https://github.com/gellsmore-svg/galeed/blob/main/SECURITY.md)
+covers storage and purging.
 
-## Running it
+## The API it reads
+
+Mizpah depends only on this public API, never on a product's internals:
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/trace/sessions` | Session summaries |
+| `GET /api/trace/events?session_id=…` or `?trace_id=…` | A session's or trace's events |
+| `GET /api/trace/stream?session_id=…&replay=true` | Live tail (SSE) |
+| `GET /api/llm-calls` | Captured model calls (Galeed only) |
+
+## Develop
 
 ```bash
-# Preferred: Galeed family trace API on :8785
-cd ../Galeed && galeed serve
-# Mizpah (http://localhost:5274, proxies /api → :8785)
-npm install && npm run dev
+npm run typecheck && npm test      # tsc + vitest
+npm run build                      # production bundle in dist/
 ```
 
-Fallback — point at a running Tirzah instead (same `/api/trace/*` shapes; no
-`/api/llm-calls`, so the **LLM Calls** tab needs Galeed):
-
-```bash
-# VITE_TRACE_API=http://localhost:8765 npm run dev
-```
-
-## Trace API it consumes
-
-- `GET /api/trace/sessions` → session summaries
-- `GET /api/trace/events?session_id=…|trace_id=…` → a session/trace's events
-- `GET /api/trace/stream?session_id=…&replay=true` → live tail (SSE)
-- `GET /api/llm-calls` → model call captures (**Galeed only**)
-
-## Scope / status
-
-**This repo is the viewer** — the "browse any session" interface over the family
-trace stream.
-
-The trace **library and HTTP host** live in
-[Galeed](https://github.com/gellsmore-svg/galeed): Galeed records structured
-process events and serves `/api/trace/*` plus `/api/llm-calls`. Mizpah remains
-decoupled from any one product's internals and talks only to that public API.
-Tirzah still speaks the same `/api/trace/*` shapes, so `VITE_TRACE_API` can
-target it when Galeed is not running (session browser only).
-
-## Review
-
-A point-in-time functional + code review of 0.1.1 is in
-[`docs/review-2026-08-11.md`](docs/review-2026-08-11.md). All findings are
-actioned except one half of M3, which was walked back on inspection — the
-reasoning is recorded inline. Chief among them: a cyclic `parent_call_id` used
-to make calls vanish from the LLM Calls view; unresolvable chains and duplicate
-ids are now shown and flagged rather than dropped.
-
-## Security note
-
-The **LLM Calls** view renders full-fidelity captures: complete prompts and
-outputs, including any retrieved memory or user content the emitting tool put
-into a prompt. Treat the Mizpah screen — and the trace database behind it —
-with the same sensitivity as the source data. The backing APIs (`galeed
-serve` / Tirzah) are unauthenticated and bind localhost; do not proxy them
-beyond your machine without authentication. See Galeed's SECURITY.md for the
-storage posture and purge guidance.
+[2026-08-11 review](docs/review-2026-08-11.md): all findings were actioned,
+except half of M3, which was withdrawn on inspection (the reasoning is
+recorded inline).
